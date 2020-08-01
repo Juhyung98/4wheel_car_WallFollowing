@@ -25,15 +25,15 @@ def callback(msg):
     xycar_sub.data[4] = msg.data[7]
     print(msg.data)
     # if angle not last_angle:
-    hz = hz_list[0]-hz_list[1]
-    rate = 1/hz
-    print(rate)
+    rate = hz_list[0]-hz_list[1]
+    hz = 1/rate
+    print(hz)
     hz_list.pop()
 
 def collision():
     global accident
     for i in xycar_sub.data:
-        if i < 20 and 0 < i:
+        if i < 50 and 0 < i:  # Based body's diagonal as diameter (20(sqrt(13))) - (body's width/2) + Correction value
             accident = True
     return accident
 
@@ -44,35 +44,36 @@ motor_pub = rospy.Publisher('xycar_motor_msg', Int32MultiArray, queue_size=1)
 ultra_sub = rospy.Subscriber('ultrasonic', Int32MultiArray, callback)
 xycar_msg = Int32MultiArray()
 
-if rate == 0:
-    rate = 123
-r = rospy.Rate(rate)
+if hz == 0:
+    hz = 123
+r = rospy.Rate(hz)
 
 while not rospy.is_shutdown():
     angle_last = 0
     velocity = 100
-    if xycar_sub.data[3]+ xycar_sub.data[2] > xycar_sub.data[4] + xycar_sub.data[0]:
+    if xycar_sub.data[3] + xycar_sub.data[2] > xycar_sub.data[4] + xycar_sub.data[0]:
         angle_cur = 20 - angle_last
         turn = 'RIGHT'
         #angle_last+=1
-    elif xycar_sub.data[3]+ xycar_sub.data[2] < xycar_sub.data[4] + xycar_sub.data[0]:
+    elif xycar_sub.data[3] + xycar_sub.data[2] < xycar_sub.data[4] + xycar_sub.data[0]:
         angle_cur = -20 + angle_last
         turn = 'LEFT'
         #angle_last-=1
     else:
         angle_cur = 0
+    
     if collision() == True:
         temp = min(xycar_sub.data)
         idx = xycar_sub.data.index(temp)
-    while float(temp)*11/10 > xycar_sub.data[idx]:
-        velocity = -100
-    if turn == 'RIGHT':
-        angle_cur -=5
-    else:
-        angle_cur +=5
-    xycar_msg.data = [angle_cur, velocity]
-    motor_pub.publish(xycar_msg)
-    accident = False
+        while float(temp)*11/10 > xycar_sub.data[idx]:
+            velocity = -100
+            if turn == 'RIGHT':
+                angle_cur -=5
+            elif turn == 'LEFT':
+                angle_cur +=5
+            xycar_msg.data = [angle_cur, velocity]
+            motor_pub.publish(xycar_msg)
+            accident = False
 
     # angle_cur = angle_last
     xycar_msg.data = [angle_cur, velocity]
