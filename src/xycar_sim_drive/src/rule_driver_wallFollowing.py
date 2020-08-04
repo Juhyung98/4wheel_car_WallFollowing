@@ -96,7 +96,7 @@ while not rospy.is_shutdown():
     right_sensor = xycar_sub.data[3] + xycar_sub.data[2]
     left_sensor = xycar_sub.data[4] + xycar_sub.data[0]
 
-   NEAR_WALL = 'TWO_WALLS'
+    NEAR_WALL = 'TWO_WALLS'
 
     if left_sensor == 0 or right_sensor == 0:
         left_sensor = 1
@@ -127,7 +127,7 @@ while not rospy.is_shutdown():
             if turn == 'RIGHT':
                 angle_cur -= value 
             elif turn == 'LEFT':
-                angle_cur += value
+                angle_cur -= value
             else:
                 turn = 'STRAIGHT'
                 angle_cur = 0   
