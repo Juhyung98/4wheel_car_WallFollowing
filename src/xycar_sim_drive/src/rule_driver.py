@@ -52,7 +52,7 @@ while not rospy.is_shutdown():
     vector  = float(right_sensor) - float(left_sensor)
     val = abs(vector) * 9 / 200
 
-  
+
     if vector > 0:
         #val = vector * 9 / 200
         angle_cur = val
@@ -66,6 +66,7 @@ while not rospy.is_shutdown():
     else:
         turn = 'STRAIGHT'
         angle_cur = 0    
+
 
     if collision() == True:
         temp = min(xycar_sub.data)
