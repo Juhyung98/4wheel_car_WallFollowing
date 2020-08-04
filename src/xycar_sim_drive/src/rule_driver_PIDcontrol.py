@@ -105,7 +105,7 @@ while not rospy.is_shutdown():
             if turn == 'RIGHT':
                 angle_cur -= presaturated_output 
             elif turn == 'LEFT':
-                angle_cur += presaturated_output
+                angle_cur -= presaturated_output
             else:
                 turn = 'STRAIGHT'
                 angle_cur = 0    
