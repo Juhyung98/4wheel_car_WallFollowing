@@ -50,16 +50,20 @@ while not rospy.is_shutdown():
         right_sensor = 1
    
     vector  = float(right_sensor) - float(left_sensor)
-    val = abs(vector) * 9 / 200
+    val = vector * 9 / 200
 
 
     if vector > 0:
         #val = vector * 9 / 200
         angle_cur = val
+        print("right val")
+        print(val)
         turn = 'RIGHT'
 
     elif vector < 0:
         #val = ((-vector) * 9 / 200)
+        print("left val")
+        print(val)
         angle_cur = val
         turn = 'LEFT'
 
@@ -76,7 +80,7 @@ while not rospy.is_shutdown():
             if turn == 'RIGHT':
                 angle_cur -= val 
             elif turn == 'LEFT':
-                angle_cur += val
+                angle_cur -= val
             else:
                 turn = 'STRAIGHT'
                 angle_cur = 0    
