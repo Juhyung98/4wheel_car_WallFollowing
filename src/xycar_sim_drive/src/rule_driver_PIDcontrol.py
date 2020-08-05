@@ -2,15 +2,19 @@
 
 import rospy
 import math
+import time
 from std_msgs.msg import Int32MultiArray
 
 
 xycar_sub = Int32MultiArray()
 xycar_sub.data = [0,0,0,0,0]
+timeList = [0]
 errorList = [0]
 accident = False
 
+
 def callback(msg):
+
     xycar_sub.data[0] = msg.data[0]
     xycar_sub.data[1] = msg.data[1]
     xycar_sub.data[2] = msg.data[2]
@@ -23,35 +27,78 @@ def callback(msg):
 def collision():
     global accident
     for i in xycar_sub.data:
-        if i < 48 + 2 and 0 < i: ## radius of boundary circle = 20*sqrt(13) ## 2 = additional space
+
+       
+        if i < 48 + 2 and 0 < i: 
             accident = True
+
     return accident        
 
+
 def get_errorControl(vector):
+    
     global errorList
     global error
-
+    
     desired_vector = 0
-    errorSum = 0
+    # errorSum = 0
+    
     error = vector - desired_vector
+
+    if error > 300:
+        error -= error * 2 / 3
+    print("error")
+    print(error)
+
     errorList.insert(0, error)
     errorPrev = errorList[1]
+
     errorControl = error - errorPrev
+    
+    # if errorControl is not 0:
+    #     errorControl = 0.0
+
+    # print("errorControl")
+    # print(errorControl)
+    # if errorControl > 100:
+    #     errorControl = 100
+
     errorList.pop()
     
     return errorControl
 
 
-def calculate_PID(error, errorControl):
+def get_dt():
+    global timeList
 
-    proportional_output = error  * 9 / 100
-    derivative_output = errorControl * 9 / 100
+    error_Time = rospy.Time.from_sec(time.time())
+    timeList.insert(0, error_Time.to_sec())
+    errorPrev_Time = timeList[1]
+    dt = error_Time.to_sec() - errorPrev_Time
+    timeList.pop()
 
-    presaturated_output = proportional_output + derivative_output
+    return dt
 
-    print("presaturated_output")
-    print(presaturated_output)
-    
+
+
+def calculate_PID(error, errorControl, dt):
+
+    kp = 0.87                  # float(17) / 200
+    #ki = float(11) / 200
+    kd = float(17) / 200
+
+    integral_output = 0
+
+    proportional_output = kp * error 
+    #integral_output = integral_output + ki * error * dt
+    derivative_output = kd * (errorControl / dt)
+
+    presaturated_output = proportional_output + derivative_output 
+    # presaturated_output = proportional_output + derivative_output + integral_output
+
+    # print("presaturated_output")
+    # print(presaturated_output)
+
     return presaturated_output
 
 
@@ -80,7 +127,8 @@ while not rospy.is_shutdown():
 
 
     errorControl = get_errorControl(vector)
-    presaturated_output = calculate_PID(error, errorControl)
+    dt = get_dt()
+    presaturated_output = calculate_PID(error, errorControl, dt)
 
 
     if vector > 0:
@@ -103,15 +151,20 @@ while not rospy.is_shutdown():
         while float(temp)+0.32 > xycar_sub.data[idx]: # 1 rate would be best!
             velocity = -100
             if turn == 'RIGHT':
-                angle_cur -= presaturated_output 
+                angle_cur = -presaturated_output 
             elif turn == 'LEFT':
-                angle_cur -= presaturated_output
+                angle_cur = -presaturated_output
             else:
                 turn = 'STRAIGHT'
-                angle_cur = 0    
+                angle_cur = 0  
+            # print("collision presaturated_output")
+            # print(presaturated_output)  
             xycar_msg.data = [angle_cur, velocity]
             motor_pub.publish(xycar_msg)  
         accident = False    
-
+        # print("collision angle_cur")
+        # print(angle_cur)
+    # print("angle_cur")
+    # print(angle_cur)
     xycar_msg.data = [angle_cur, velocity]
     motor_pub.publish(xycar_msg)
