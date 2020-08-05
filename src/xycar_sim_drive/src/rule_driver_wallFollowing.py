@@ -22,7 +22,7 @@ def callback(msg):
 def collision():
     global accident
     for i in xycar_sub.data:
-        if i < 48 + 2 and 0 < i: ## radius of boundary circle = 20*sqrt(13) ## 2 = additional space
+        if i < 48 + 2 and 0 < i:    ## radius of boundary circle = 20*sqrt(13) ## 2 = additional space
             accident = True
     return accident        
 
@@ -40,21 +40,15 @@ def getTargetSensor(NEAR_WALL, right_sensor, left_sensor) :
 def wallFollowing(targetSensor, val):
     global angle_cur
 
-    # print("targetSensor")
-    # print(targetSensor)
-
     if targetSensor > 150:
         angle_cur -= val
-        # print("angle_cur")
-        # print(angle_cur)
+        
     elif targetSensor < 150:
         angle_cur += val
-        # print("angle_cur")
-        # print(angle_cur)
+       
     else:
         angle_cur = 0
-        # print("angle_cur")
-        # print(angle_cur)
+       
 
 def turnDirection(vector):
     global angle_cur, value
@@ -85,9 +79,7 @@ xycar_msg = Int32MultiArray()
 
 
 while not rospy.is_shutdown():
-    # hello_str = "helloWorld %s" %rospy.get_time()
-    # rospy.loginfo(hello_str) 
-
+ 
     val = 1.0
     value = 1.0
     angle_cur = 0
