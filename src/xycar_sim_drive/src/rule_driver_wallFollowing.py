@@ -40,21 +40,12 @@ def getTargetSensor(NEAR_WALL, right_sensor, left_sensor) :
 def wallFollowing(targetSensor, val):
     global angle_cur
 
-    # print("targetSensor")
-    # print(targetSensor)
-
     if targetSensor > 150:
         angle_cur -= val
-        # print("angle_cur")
-        # print(angle_cur)
     elif targetSensor < 150:
         angle_cur += val
-        # print("angle_cur")
-        # print(angle_cur)
     else:
         angle_cur = 0
-        # print("angle_cur")
-        # print(angle_cur)
 
 def turnDirection(vector):
     global angle_cur, value
@@ -62,12 +53,10 @@ def turnDirection(vector):
     value = abs(vector) * 9 / 200
 
     if vector > 0:
-        #val = vector * 9 / 200
         angle_cur = value
         turn = 'RIGHT'
 
     elif vector < 0:
-        #val = ((-vector) * 9 / 200)
         angle_cur = value
         turn = 'LEFT'
 
@@ -85,8 +74,6 @@ xycar_msg = Int32MultiArray()
 
 
 while not rospy.is_shutdown():
-    # hello_str = "helloWorld %s" %rospy.get_time()
-    # rospy.loginfo(hello_str) 
 
     val = 1.0
     value = 1.0
@@ -130,8 +117,7 @@ while not rospy.is_shutdown():
                 angle_cur -= value
             else:
                 turn = 'STRAIGHT'
-                angle_cur = 0   
-            # angle_cur = 0 
+                angle_cur = 0    
             xycar_msg.data = [angle_cur, velocity]
             motor_pub.publish(xycar_msg)  
         accident = False    
