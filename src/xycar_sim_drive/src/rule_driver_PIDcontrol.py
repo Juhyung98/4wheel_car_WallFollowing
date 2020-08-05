@@ -15,6 +15,9 @@ accident = False
 
 def callback(msg):
 
+    ## As we don't use index [3], [4], [5]
+    ## Make new data array
+
     xycar_sub.data[0] = msg.data[0]
     xycar_sub.data[1] = msg.data[1]
     xycar_sub.data[2] = msg.data[2]
@@ -26,56 +29,43 @@ def callback(msg):
 
 def collision():
     global accident
-    for i in xycar_sub.data:
 
-       
-        if i < 48 + 2 and 0 < i: 
+    for i in xycar_sub.data:
+        if i < 48 + 2 and 0 < i:         ## radius of car's boundary circle is 20*sqrt(13) (=about 48)
+                                            ## 2 = additional space
             accident = True
 
     return accident        
 
 
 def get_errorControl(vector):
-    
-    global errorList
+    global errorList        ## record error
     global error
     
     desired_vector = 0
-    # errorSum = 0
-    
     error = vector - desired_vector
 
     if error > 300:
         error -= error * 2 / 3
-    print("error")
-    print(error)
-
+   
     errorList.insert(0, error)
     errorPrev = errorList[1]
 
     errorControl = error - errorPrev
     
-    # if errorControl is not 0:
-    #     errorControl = 0.0
-
-    # print("errorControl")
-    # print(errorControl)
-    # if errorControl > 100:
-    #     errorControl = 100
-
-    errorList.pop()
+    errorList.pop()                     ## errorList[1] is always errorPrev, errorList[[0] is always error(current error)
     
     return errorControl
 
 
 def get_dt():
-    global timeList
+    global timeList     ## record time
 
     error_Time = rospy.Time.from_sec(time.time())
     timeList.insert(0, error_Time.to_sec())
     errorPrev_Time = timeList[1]
     dt = error_Time.to_sec() - errorPrev_Time
-    timeList.pop()
+    timeList.pop()                      ## timeList[1] is always errorPrev_Time, errorList[[0] is always error_Time(current error time)
 
     return dt
 
@@ -83,8 +73,8 @@ def get_dt():
 
 def calculate_PID(error, errorControl, dt):
 
-    kp = 0.87                  # float(17) / 200
-    #ki = float(11) / 200
+    kp = 0.87                           ## float(17) / 200 
+    #ki = float(11) / 200               ## 
     kd = float(17) / 200
 
     integral_output = 0
@@ -111,9 +101,8 @@ xycar_msg = Int32MultiArray()
 
 while not rospy.is_shutdown():
 
-    val = 1.0
     angle_cur = 0
-    velocity = 100  
+    velocity = 100      ## you can change velocity
     error = 0.0
 
     right_sensor = xycar_sub.data[3] + xycar_sub.data[2]
@@ -148,7 +137,7 @@ while not rospy.is_shutdown():
         temp = min(xycar_sub.data)
         idx = xycar_sub.data.index(temp)
 
-        while float(temp)+0.32 > xycar_sub.data[idx]: # 1 rate would be best!
+        while float(temp)+0.32 > xycar_sub.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
             velocity = -100
             if turn == 'RIGHT':
                 angle_cur = -presaturated_output 
