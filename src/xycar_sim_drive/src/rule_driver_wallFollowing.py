@@ -37,27 +37,27 @@ def getTargetSensor(NEAR_WALL, right_sensor, left_sensor) :
 
     return targetSensor
 
-def wallFollowing(targetSensor, val):
+def wallFollowing(targetSensor, VtoA):
     global angle_cur
 
     if targetSensor > 150:
-        angle_cur -= val
+        angle_cur -= VtoA
     elif targetSensor < 150:
-        angle_cur += val
+        angle_cur += VtoA
     else:
         angle_cur = 0
 
 def turnDirection(vector):
     global angle_cur, value
 
-    value = abs(vector) * 9 / 200
+    VtoA = vector * 50 / 1000   # 50 (MAX angle) / MAX(vector)  
 
     if vector > 0:
-        angle_cur = value
+        angle_cur = VtoA
         turn = 'RIGHT'
 
     elif vector < 0:
-        angle_cur = value
+        angle_cur = VtoA
         turn = 'LEFT'
 
     else:
@@ -75,8 +75,7 @@ xycar_msg = Int32MultiArray()
 
 while not rospy.is_shutdown():
 
-    val = 1.0
-    value = 1.0
+    VtoA = 1.0
     angle_cur = 0
     velocity = 100  
 
@@ -90,7 +89,7 @@ while not rospy.is_shutdown():
         right_sensor = 1
    
     vector  = float(right_sensor) - float(left_sensor)
-    val = vector * 18 / 200
+    VtoA = vector * 50 / 1000
 
     if right_sensor > left_sensor:
         NEAR_WALL = 'LEFT_WALL'
@@ -100,7 +99,7 @@ while not rospy.is_shutdown():
         NEAR_WALL = 'TWO_WALLS'
 
     targetSensor = getTargetSensor(NEAR_WALL, right_sensor, left_sensor)
-    wallFollowing(targetSensor, val)
+    wallFollowing(targetSensor, VtoA)
 
     if right_sensor > 500 or left_sensor > 500:
         turn = turnDirection(vector)    
@@ -112,9 +111,9 @@ while not rospy.is_shutdown():
         while float(temp)+0.32 > xycar_sub.data[idx]: # 1 rate would be best!
             velocity = -100
             if turn == 'RIGHT':
-                angle_cur -= value 
+                angle_cur = -VtoA  
             elif turn == 'LEFT':
-                angle_cur -= value
+                angle_cur = -VtoA 
             else:
                 turn = 'STRAIGHT'
                 angle_cur = 0    
