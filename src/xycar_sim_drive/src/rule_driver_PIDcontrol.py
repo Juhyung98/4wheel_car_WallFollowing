@@ -54,8 +54,9 @@ def get_errorControl(vector):
     
     error = vector - desired_vector
 
-    if error > 300:                 ## compressed error (help D control)
-        error -= error * 0.7
+    if error > 500:                 ## compressed error (help D control)
+        error = error * 0.5
+
     # print("error")
     # print(error)
 
@@ -76,11 +77,11 @@ def get_errorControl(vector):
 ###                                     ###
 
 def calculate_PID(error, errorControl): 
-    global constant_PresaturatedToAnagle
+    global constant_PresaturatedToAngle
 
-    kp = 5.0                  
-    kd = 1.0        #float(17) / 200
-    constant_PresaturatedToAnagle =  float(1) / 28          ## constant_PresaturatedToAnagle size is related with kp
+    kp = 10.0                  
+    kd = 5.0        #float(17) / 200
+    constant_PresaturatedToAngle =  float(1) / 46          ## constant_PresaturatedToAngle size is related with kp
     
     proportional_output = kp * error                        ## P control
     derivative_output = kd * (errorControl)                 ## D control
@@ -94,8 +95,8 @@ def calculate_PID(error, errorControl):
     ## integral_output = integral_output + ki * error 
     ## presaturated_output = proportional_output + derivative_output + integral_output
 
-    print("presaturated_output")
-    print(presaturated_output)
+    # print("presaturated_output")
+    # print(presaturated_output)
 
     return presaturated_output
 
@@ -131,7 +132,7 @@ def check_collision():
 ###                                       ###
 
 def escape_collision():
-    global turn, presaturated_output, accidentPossibility, collisionRange
+    global turn, presaturated_output, accidentPossibility, collisionRange, constant_PresaturatedToAngle
 
     temp = min(xycar_sensor.data)
     idx = xycar_sensor.data.index(temp)
@@ -139,9 +140,9 @@ def escape_collision():
     while collisionRange > xycar_sensor.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
             velocity = -100
             if turn == 'RIGHT':
-                angle_cur = -presaturated_output #* 0.9
+                angle_cur = -presaturated_output * constant_PresaturatedToAngle
             elif turn == 'LEFT':
-                angle_cur = +presaturated_output #* 0.9
+                angle_cur = +presaturated_output * constant_PresaturatedToAngle
             else:
                 turn = 'STRAIGHT'
                 angle_cur = 0  
@@ -150,6 +151,8 @@ def escape_collision():
             xycar_msg.data = [angle_cur, velocity]
             motor_pub.publish(xycar_msg)  
     
+            print("collision")
+            print(angle_cur)
     accidentPossibility = False 
 
 # rth = ROSTopicHz.get_hz(topic=/ultrasonic)
@@ -176,18 +179,20 @@ while not rospy.is_shutdown():
     valueForCentering = get_valueForCentering()
     errorControl = get_errorControl(valueForCentering)
     presaturated_output = abs(calculate_PID(error, errorControl))
-    print("presaturated_output")
-    print(presaturated_output)
+    # print("presaturated_output")
+    # print(presaturated_output)
 
     if valueForCentering > 0:
         turn = 'RIGHT'
-        angle_cur = presaturated_output * constant_PresaturatedToAnagle
-        
+        angle_cur = presaturated_output * constant_PresaturatedToAngle
+        # print("angle_cur")
+        # print(angle_cur)
 
     elif valueForCentering < 0:
         turn = 'LEFT'
-        angle_cur = -presaturated_output * constant_PresaturatedToAnagle
-        
+        angle_cur = -presaturated_output * constant_PresaturatedToAngle
+        # print("angle_cur")
+        # print(angle_cur)
 
     else:
         turn = 'STRAIGHT'
@@ -197,8 +202,8 @@ while not rospy.is_shutdown():
     if check_collision() == True:
         escape_collision()  
         
-    print("angle_cur")
-    print(angle_cur)
+    # print("angle_cur")
+    # print(angle_cur)
 
     xycar_msg.data = [angle_cur, velocity]
     motor_pub.publish(xycar_msg)
