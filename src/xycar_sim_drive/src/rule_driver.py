@@ -132,7 +132,7 @@ def escape_collision():
     accidentPossibility_sensor_idx = xycar_sensor.data.index(accidentPossibility_sensor)
 
     while collisionRange > xycar_sensor.data[accidentPossibility_sensor_idx]:         
-            velocity = -100
+            velocity = -25
             if turn == 'RIGHT':
                 angle = -presaturated_output * constant_PresaturatedToAngle
             elif turn == 'LEFT':
@@ -155,7 +155,7 @@ xycar_sensor.data = [0,0,0,0,0]
 errorList = [0]
 accidentPossibility = False
 angle = 0
-velocity = 100      ## you can change velocity  
+velocity = 25      ## you can change velocity  
 error = 0.0
 
 rospy.init_node('guide')
