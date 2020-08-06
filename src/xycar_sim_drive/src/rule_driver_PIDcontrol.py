@@ -15,7 +15,7 @@ accident = False
 
 def callback(msg):
 
-    ## As we don't use index [3], [4], [5]
+        ## As we don't use index [3], [4], [5]
     ## Make new data array
 
     xycar_sub.data[0] = msg.data[0]
@@ -39,20 +39,23 @@ def collision():
 
 
 def get_errorControl(vector):
-    global errorList        ## record error
+    global errorList          ## record error
     global error
     
     desired_vector = 0
+    
     error = vector - desired_vector
 
     if error > 300:
-        error -= error * 2 / 3
-   
+        error -= error * 0.7
+    # print("error")
+    # print(error)
+
     errorList.insert(0, error)
     errorPrev = errorList[1]
 
     errorControl = error - errorPrev
-    
+
     errorList.pop()                     ## errorList[1] is always errorPrev, errorList[[0] is always error(current error)
     
     return errorControl
@@ -73,9 +76,9 @@ def get_dt():
 
 def calculate_PID(error, errorControl, dt):
 
-    kp = 0.87                           ## float(17) / 200 
-    #ki = float(11) / 200               ## 
-    kd = float(17) / 200
+    kp = 5.0                 # float(17) / 200
+    #ki = float(11) / 200
+    kd = 1.0 #float(17) / 200
 
     integral_output = 0
 
@@ -86,8 +89,8 @@ def calculate_PID(error, errorControl, dt):
     presaturated_output = proportional_output + derivative_output 
     # presaturated_output = proportional_output + derivative_output + integral_output
 
-    # print("presaturated_output")
-    # print(presaturated_output)
+    print("presaturated_output")
+    print(presaturated_output)
 
     return presaturated_output
 
@@ -102,7 +105,7 @@ xycar_msg = Int32MultiArray()
 while not rospy.is_shutdown():
 
     angle_cur = 0
-    velocity = 100      ## you can change velocity
+    velocity = 100      ## you can change velocity  
     error = 0.0
 
     right_sensor = xycar_sub.data[3] + xycar_sub.data[2]
@@ -117,15 +120,16 @@ while not rospy.is_shutdown():
 
     errorControl = get_errorControl(vector)
     dt = get_dt()
-    presaturated_output = calculate_PID(error, errorControl, dt)
-
+    presaturated_output = abs(calculate_PID(error, errorControl, dt))
+    print("presaturated_output")
+    print(presaturated_output)
 
     if vector > 0:
-        angle_cur = presaturated_output
+        angle_cur = presaturated_output * 1 / 28
         turn = 'RIGHT'
 
     elif vector < 0:
-        angle_cur = presaturated_output
+        angle_cur = -presaturated_output * 1 / 28
         turn = 'LEFT'
 
     else:
@@ -140,9 +144,9 @@ while not rospy.is_shutdown():
         while float(temp)+0.32 > xycar_sub.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
             velocity = -100
             if turn == 'RIGHT':
-                angle_cur = -presaturated_output 
+                angle_cur = -presaturated_output #* 0.9
             elif turn == 'LEFT':
-                angle_cur = -presaturated_output
+                angle_cur = +presaturated_output #* 0.9
             else:
                 turn = 'STRAIGHT'
                 angle_cur = 0  
@@ -153,7 +157,7 @@ while not rospy.is_shutdown():
         accident = False    
         # print("collision angle_cur")
         # print(angle_cur)
-    # print("angle_cur")
-    # print(angle_cur)
+    print("angle_cur")
+    print(angle_cur)
     xycar_msg.data = [angle_cur, velocity]
     motor_pub.publish(xycar_msg)
