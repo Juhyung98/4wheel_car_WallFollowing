@@ -27,15 +27,15 @@ def callback(msg):
     print(msg.data)
   
 
-def collision():
-    global accident
+def check_collision():
+    global accidentPossibility
 
     for i in xycar_sub.data:
         if i < 48 + 2 and 0 < i:         ## radius of car's boundary circle is 20*sqrt(13) (=about 48)
                                             ## 2 = additional space
-            accident = True
+            accidentPossibility = True
 
-    return accident        
+    return accidentPossibility        
 
 
 def get_errorControl(vector):
@@ -61,30 +61,30 @@ def get_errorControl(vector):
     return errorControl
 
 
-def get_dt():
-    global timeList     ## record time
+# def get_dt():
+#     global timeList     ## record time
 
-    error_Time = rospy.Time.from_sec(time.time())
-    timeList.insert(0, error_Time.to_sec())
-    errorPrev_Time = timeList[1]
-    dt = error_Time.to_sec() - errorPrev_Time
-    timeList.pop()                      ## timeList[1] is always errorPrev_Time, errorList[[0] is always error_Time(current error time)
+#     error_Time = rospy.Time.from_sec(time.time())
+#     timeList.insert(0, error_Time.to_sec())
+#     errorPrev_Time = timeList[1]
+#     dt = error_Time.to_sec() - errorPrev_Time
+#     timeList.pop()                      ## timeList[1] is always errorPrev_Time, errorList[[0] is always error_Time(current error time)
 
-    return dt
+#     return dt
 
 
 
 def calculate_PID(error, errorControl, dt):
 
-    kp = 5.0                 # float(17) / 200
+    kp = 5.0                
     #ki = float(11) / 200
     kd = 1.0 #float(17) / 200
 
-    integral_output = 0
-
+    constant_PresaturatedToAnagle =  float(1) / 28
+    #integral_output = 0
     proportional_output = kp * error 
     #integral_output = integral_output + ki * error * dt
-    derivative_output = kd * (errorControl / dt)
+    derivative_output = kd * (errorControl) # / dt)
 
     presaturated_output = proportional_output + derivative_output 
     # presaturated_output = proportional_output + derivative_output + integral_output
@@ -94,6 +94,25 @@ def calculate_PID(error, errorControl, dt):
 
     return presaturated_output
 
+
+
+def escape_collision():
+    global turn
+
+    while float(temp)+0.32 > xycar_sub.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
+            velocity = -100
+            if turn == 'RIGHT':
+                angle_cur = -presaturated_output #* 0.9
+            elif turn == 'LEFT':
+                angle_cur = +presaturated_output #* 0.9
+            else:
+                turn = 'STRAIGHT'
+                angle_cur = 0  
+            # print("collision presaturated_output")
+            # print(presaturated_output)  
+            xycar_msg.data = [angle_cur, velocity]
+            motor_pub.publish(xycar_msg)  
+     accidentPossibility = False 
 
 # rth = ROSTopicHz.get_hz(topic=/ultrasonic) 
 rospy.init_node('guide')
@@ -125,38 +144,44 @@ while not rospy.is_shutdown():
     print(presaturated_output)
 
     if vector > 0:
-        angle_cur = presaturated_output * 1 / 28
         turn = 'RIGHT'
+        angle_cur = presaturated_output * constant_PresaturatedToAnagle
+        
 
     elif vector < 0:
-        angle_cur = -presaturated_output * 1 / 28
         turn = 'LEFT'
+        angle_cur = -presaturated_output * constant_PresaturatedToAnagle
+        
 
     else:
         turn = 'STRAIGHT'
         angle_cur = 0    
 
 
-    if collision() == True:
+    if check_collision() == True:
         temp = min(xycar_sub.data)
         idx = xycar_sub.data.index(temp)
 
-        while float(temp)+0.32 > xycar_sub.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
-            velocity = -100
-            if turn == 'RIGHT':
-                angle_cur = -presaturated_output #* 0.9
-            elif turn == 'LEFT':
-                angle_cur = +presaturated_output #* 0.9
-            else:
-                turn = 'STRAIGHT'
-                angle_cur = 0  
-            # print("collision presaturated_output")
-            # print(presaturated_output)  
-            xycar_msg.data = [angle_cur, velocity]
-            motor_pub.publish(xycar_msg)  
-        accident = False    
+        # while float(temp)+0.32 > xycar_sub.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
+        #     velocity = -100
+        #     if turn == 'RIGHT':
+        #         angle_cur = -presaturated_output #* 0.9
+        #     elif turn == 'LEFT':
+        #         angle_cur = +presaturated_output #* 0.9
+        #     else:
+        #         turn = 'STRAIGHT'
+        #         angle_cur = 0  
+        #     # print("collision presaturated_output")
+        #     # print(presaturated_output)  
+        #     xycar_msg.data = [angle_cur, velocity]
+        #     motor_pub.publish(xycar_msg)  
+        # accident = False
+          
+        escape_collision()  
+
         # print("collision angle_cur")
         # print(angle_cur)
+        
     print("angle_cur")
     print(angle_cur)
     xycar_msg.data = [angle_cur, velocity]
