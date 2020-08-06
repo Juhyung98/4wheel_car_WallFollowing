@@ -24,18 +24,16 @@ def callback(msg):
   
 
 
-###                                                        ### 
-### Get valueForCentering to make angle                    ###
-###                                                        ### 
+###                                          ### 
+### Get valueForCentering to make angle      ###
+### We want to make valueForCentering == 0   ### 
+### Do PID control using valueForCentering   ###           
+
 def get_valueForCentering():
     global valueForCentering
 
     right_sensor = xycar_sub.data[3] + xycar_sub.data[2]
     left_sensor = xycar_sub.data[4] + xycar_sub.data[0]
-
-    # if left_sensor == 0 or right_sensor == 0:
-    #     left_sensor = 1
-    #     right_sensor = 1
    
     valueForCentering  = float(right_sensor) - float(left_sensor)
 
@@ -121,9 +119,10 @@ def calculate_PID(error, errorControl): #, dt):
 def check_collision():
     global accidentPossibility
 
-    for i in xycar_sub.data:
-        if i < 48 + 2 and 0 < i:            ## radius of car's boundary circle is 20*sqrt(13) (=about 48)
-                                            ## 2 = additional space
+    collisionRange = 48 + 2         ## radius of car's boundary circle is 20*sqrt(13) (=about 48)
+                                    ## 2 = additional space
+    for sensorLength in xycar_sub.data:
+        if sensorLength < collisionRange and 0 < sensorLength:           
             accidentPossibility = True
 
     return accidentPossibility        
@@ -138,7 +137,11 @@ def check_collision():
 def escape_collision():
     global turn, presaturated_output, accidentPossibility
 
-    while float(temp)+0.32 > xycar_sub.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
+    valueForAvoiding = 0.32
+    temp = min(xycar_sub.data)
+    idx = xycar_sub.data.index(temp)
+
+    while float(temp) + valueForAvoiding > xycar_sub.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
             velocity = -100
             if turn == 'RIGHT':
                 angle_cur = -presaturated_output #* 0.9
@@ -199,13 +202,7 @@ while not rospy.is_shutdown():
 
 
     if check_collision() == True:
-        temp = min(xycar_sub.data)
-        idx = xycar_sub.data.index(temp)
-
         escape_collision()  
-
-        # print("collision angle_cur")
-        # print(angle_cur)
         
     print("angle_cur")
     print(angle_cur)
