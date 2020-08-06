@@ -8,20 +8,21 @@ from std_msgs.msg import Int32MultiArray
 
 def callback(msg):
 
-    ###                                      ###
-    ### As we don't use index [3], [4], [5]  ###
-    ### Make new data array                  ###
-    ### msg.data[3], msg.data[4], msg.data[5] is always 0 in this situation
-    ###                                      ###
+    ###                                                                       ###
+    ### As we don't use index [3], [4], [5]                                   ###
+    ### Make new data array                                                   ###
+    ### msg.data[3], msg.data[4], msg.data[5] is always 0 in this situation   ###
+    ###                                                                       ###
 
-    xycar_sub.data[0] = msg.data[0]
-    xycar_sub.data[1] = msg.data[1]
-    xycar_sub.data[2] = msg.data[2]
-    xycar_sub.data[3] = msg.data[6]
-    xycar_sub.data[4] = msg.data[7]
+    xycar_sensor.data[0] = msg.data[0]
+    xycar_sensor.data[1] = msg.data[1]
+    xycar_sensor.data[2] = msg.data[2]
+    xycar_sensor.data[3] = msg.data[6]
+    xycar_sensor.data[4] = msg.data[7]
 
-    print(msg.data)
+    print(xycar_sensor.data)
   
+
 
 
 ###                                          ### 
@@ -32,12 +33,14 @@ def callback(msg):
 def get_valueForCentering():
     global valueForCentering
 
-    right_sensor = xycar_sub.data[3] + xycar_sub.data[2]
-    left_sensor = xycar_sub.data[4] + xycar_sub.data[0]
+    right_sensor = xycar_sensor.data[3] + xycar_sensor.data[2]
+    left_sensor = xycar_sensor.data[4] + xycar_sensor.data[0]
    
     valueForCentering  = float(right_sensor) - float(left_sensor)
 
     return valueForCentering
+
+
 
 
 ###                                                        ### 
@@ -51,7 +54,7 @@ def get_errorControl(vector):
     
     error = vector - desired_vector
 
-    if error > 300:                 ## compressed error (D control)
+    if error > 300:                 ## compressed error (help D control)
         error -= error * 0.7
     # print("error")
     # print(error)
@@ -61,21 +64,9 @@ def get_errorControl(vector):
 
     errorControl = error - errorPrev
 
-    errorList.pop()                     ## errorList[1] is always errorPrev, errorList[[0] is always error(current error)
+    errorList.pop()                 ## errorList[1] is always errorPrev, errorList[[0] is always error(current error)
     
     return errorControl
-
-
-# def get_dt():
-#     global timeList     ## record time
-
-#     error_Time = rospy.Time.from_sec(time.time())
-#     timeList.insert(0, error_Time.to_sec())
-#     errorPrev_Time = timeList[1]
-#     dt = error_Time.to_sec() - errorPrev_Time
-#     timeList.pop()                      ## timeList[1] is always errorPrev_Time, errorList[[0] is always error_Time(current error time)
-
-#     return dt
 
 
 
@@ -84,23 +75,23 @@ def get_errorControl(vector):
 ### Following codes are for PID control ###
 ###                                     ###
 
-def calculate_PID(error, errorControl): #, dt):
+def calculate_PID(error, errorControl): 
     global constant_PresaturatedToAnagle
 
     kp = 5.0                  
     kd = 1.0        #float(17) / 200
-    constant_PresaturatedToAnagle =  float(1) / 28
+    constant_PresaturatedToAnagle =  float(1) / 28          ## constant_PresaturatedToAnagle size is related with kp
     
     proportional_output = kp * error                        ## P control
-    derivative_output = kd * (errorControl) # / dt)         ## D control
+    derivative_output = kd * (errorControl)                 ## D control
     presaturated_output = proportional_output + derivative_output       ## PD control
 
 
     ### If you want to add I control, add following codes ###
-
+    ###                                                                        
     ## ki = float(11) / 200
     ## integral_output = 0
-    ## integral_output = integral_output + ki * error * dt
+    ## integral_output = integral_output + ki * error 
     ## presaturated_output = proportional_output + derivative_output + integral_output
 
     print("presaturated_output")
@@ -111,17 +102,22 @@ def calculate_PID(error, errorControl): #, dt):
 
 
 
-
 ###                                     ### 
 ### Chcek the possibility of accident   ###
 ###                                     ### 
 
 def check_collision():
-    global accidentPossibility
+    global accidentPossibility, collisionRange
 
-    collisionRange = 48 + 2         ## radius of car's boundary circle is 20*sqrt(13) (=about 48)
-                                    ## 2 = additional space
-    for sensorLength in xycar_sub.data:
+    carWidth = 48
+    carLength = 136
+    carDiagonal = math.sqrt(carWidth * carWidth + carLength * carLength)    ## radius of car's boundary circle is 20*sqrt(13) in this situation
+    maxSafetyRange = (carDiagonal - carWidth) / 2                 ## (=about 48) in this situation
+    additionalSpace = 2
+
+    collisionRange = maxSafetyRange + additionalSpace         
+                                    
+    for sensorLength in xycar_sensor.data:
         if sensorLength < collisionRange and 0 < sensorLength:           
             accidentPossibility = True
 
@@ -135,13 +131,12 @@ def check_collision():
 ###                                       ###
 
 def escape_collision():
-    global turn, presaturated_output, accidentPossibility
+    global turn, presaturated_output, accidentPossibility, collisionRange
 
-    valueForAvoiding = 0.32
-    temp = min(xycar_sub.data)
-    idx = xycar_sub.data.index(temp)
+    temp = min(xycar_sensor.data)
+    idx = xycar_sensor.data.index(temp)
 
-    while float(temp) + valueForAvoiding > xycar_sub.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
+    while collisionRange > xycar_sensor.data[idx]:          # 0.32 is the max distance per sec when topic hz is 132hz
             velocity = -100
             if turn == 'RIGHT':
                 angle_cur = -presaturated_output #* 0.9
@@ -161,8 +156,8 @@ def escape_collision():
 
 
 
-xycar_sub = Int32MultiArray()
-xycar_sub.data = [0,0,0,0,0]
+xycar_sensor = Int32MultiArray()
+xycar_sensor.data = [0,0,0,0,0]
 timeList = [0]
 errorList = [0]
 accidentPossibility = False
@@ -180,9 +175,7 @@ while not rospy.is_shutdown():
 
     valueForCentering = get_valueForCentering()
     errorControl = get_errorControl(valueForCentering)
-    #dt = get_dt()
-    presaturated_output = abs(calculate_PID(error, errorControl)) #, dt))
-
+    presaturated_output = abs(calculate_PID(error, errorControl))
     print("presaturated_output")
     print(presaturated_output)
 
