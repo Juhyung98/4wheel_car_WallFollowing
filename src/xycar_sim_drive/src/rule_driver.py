@@ -45,12 +45,12 @@ def get_valueForCentering():
 ### Get 'error' and 'errorControl' value for PID control   ###
 ###                                                        ### 
 
-def get_errorControl(vector):
+def get_errorControl(valueForCentering):
     global error, errorList          ## record error
     
-    desired_vector = 0
+    desired_valueForCentering = 0
     
-    error = vector - desired_vector
+    error = valueForCentering - desired_valueForCentering
 
     if error > 500:                 ## compressed error (help D control)
         error = error * 0.5
@@ -107,10 +107,10 @@ def check_collision():
     carWidth = 48
     carLength = 136
     carDiagonal = math.sqrt(carWidth * carWidth + carLength * carLength)    ## radius of car's boundary circle is about 20*sqrt(13) in this situation
-    maxSafetyRange = (carDiagonal - carWidth) / 2                           ## maxSafetyRange is about 48 in this situation
+    rollAheadDistance = (carDiagonal - carWidth) / 2                           ## rollAheadDistance is about 48 in this situation
     additionalSpace = 2
 
-    collisionRange = maxSafetyRange + additionalSpace         
+    collisionRange = rollAheadDistance + additionalSpace         
                                     
     for sensorLength in xycar_sensor.data:
         if sensorLength < collisionRange and 0 < sensorLength:           
