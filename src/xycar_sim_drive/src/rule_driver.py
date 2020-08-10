@@ -188,3 +188,4 @@ while not rospy.is_shutdown():
 
     xycar_msg.data = [angle, velocity]
     motor_pub.publish(xycar_msg)
+    
